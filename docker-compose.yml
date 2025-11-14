@@ -1,0 +1,59 @@
+version: '3.10'
+
+services:
+  db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: ticket_analyze_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Initialize the database with the provided SQL on first run
+      - ./db/create_database.sql:/docker-entrypoint-initdb.d/create_database.sql:ro
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+    restart: on-failure
+    environment:
+      # Flask app entrypoint (routes.py defines `app`)
+      FLASK_APP: "app.routes:app"
+      FLASK_ENV: production
+      # Database (models.py expects host `db`, database/tuser/password as below)
+      DATABASE_HOST: db
+      DATABASE_NAME: ticket_analyze_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: root
+      PORT: 5000
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    # Use the flask CLI to start the app so the correct app object is used
+    command: flask run --host=0.0.0.0 --port=5000
+    # bind-mount backend for convenience (optional; remove for strict image-only deployment)
+    volumes:
+      - ./backend:/app:ro
+
+  frontend:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # Serve the pre-built static frontend files from ./frontend/build
+    ports:
+      # Expose on host port 3000 mapped to nginx:80 so the project remains accessible at localhost:3000
+      - "3000:80"
+    volumes:
+      - ./frontend/build:/usr/share/nginx/html:ro
+
+volumes:
+  db-data:
+
+networks:
+  default:
+    name: support_ticket_analyst_net
