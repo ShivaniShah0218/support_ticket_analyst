@@ -6,7 +6,7 @@ import os
 import datetime
 from typing import List, Optional
 from flask import Flask, request, jsonify, abort
-from models import create_ticket, get_tickets, get_last_analysis
+from models import create_ticket, get_last_analysis
 from agent_flow import tickets_analyze
 
 
@@ -44,8 +44,8 @@ def analyze_tickets():
     if ticket_ids is not None and not isinstance(ticket_ids, list):
         abort(400, description="ticketIds must be an array of integers if provided.")
 
-    tickets = get_tickets(ticket_ids)
-    output=tickets_analyze.run()
+    
+    output=tickets_analyze.run(ticket_ids)
     print(output)
 
     return jsonify({"output":output}), 201
@@ -68,6 +68,6 @@ def get_latest_analysis():
     return jsonify({"analysis_run": latest_run[0], "ticket_analysis": results}), 200
 
 
-# Only run the app when executed directly (helpful for local testing)
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+# # Only run the app when executed directly (helpful for local testing)
+# if __name__ == "__main__":
+#     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
